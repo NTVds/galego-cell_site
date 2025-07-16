@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechOS Pro - Sistema de Gestão de Ordens de Serviço</title>
+    <title>Galego Cell - Sistema de Gestão de Ordens de Serviço</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -125,8 +125,8 @@
                         <i class="fas fa-cogs text-white text-xl"></i>
                     </div>
                     <div>
-                        <h1 class="text-xl font-bold text-white">TechOS Pro</h1>
-                        <p class="text-slate-300 text-sm">Gestão Profissional</p>
+                        <h1 class="text-xl font-bold text-white">Galego Cell</h1>
+                        <p class="text-slate-300 text-sm">TechOS Pro</p>
                     </div>
                 </div>
                 
@@ -625,7 +625,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Nome da Empresa</label>
-                                    <input type="text" value="TechOS Pro Assistência" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <input type="text" value="Galego Cell - Assistência Técnica" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">CNPJ</label>
@@ -1101,6 +1101,9 @@
                             <button onclick="editStatus('${os.id}')" class="text-blue-600 hover:text-blue-900 text-sm" title="Editar Status">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            <button onclick="generateInvoice('${os.numero}')" class="text-orange-600 hover:text-orange-900 text-sm" title="Nota Fiscal">
+                                <i class="fas fa-file-invoice"></i>
+                            </button>
                             <button onclick="copyTrackingLink('${os.numero}')" class="text-green-600 hover:text-green-900 text-sm" title="Link Cliente">
                                 <i class="fas fa-link"></i>
                             </button>
@@ -1151,6 +1154,9 @@
                         <div class="flex space-x-3">
                             <button onclick="editStatus('${os.id}')" class="text-blue-600 hover:text-blue-900 text-sm" title="Editar Status">
                                 <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="generateInvoice('${os.numero}')" class="text-orange-600 hover:text-orange-900 text-sm" title="Nota Fiscal">
+                                <i class="fas fa-file-invoice"></i>
                             </button>
                             <button onclick="copyTrackingLink('${os.numero}')" class="text-green-600 hover:text-green-900 text-sm" title="Link Cliente">
                                 <i class="fas fa-link"></i>
@@ -1392,7 +1398,11 @@
                     
                     <div class="text-center">
                         <p class="text-sm text-gray-500 mb-4">Última atualização: ${os.dataAtualizacao}</p>
-                        <div class="flex justify-center space-x-4">
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <button onclick="generateInvoice('${os.numero}')" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all">
+                                <i class="fas fa-file-invoice mr-2"></i>
+                                Gerar Nota Fiscal
+                            </button>
                             <button onclick="window.print()" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-all">
                                 <i class="fas fa-print mr-2"></i>
                                 Imprimir
@@ -1437,6 +1447,294 @@
         // Generate report
         function generateReport() {
             showNotification('info', 'Relatório', 'Gerando relatório em PDF...');
+        }
+
+        // Generate invoice
+        function generateInvoice(osNumber) {
+            const os = osData.find(o => o.numero === osNumber);
+            if (!os) return;
+            
+            // Create invoice window
+            const invoiceWindow = window.open('', '_blank', 'width=800,height=600');
+            const invoiceContent = `
+                <!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Nota Fiscal - ${os.numero}</title>
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            margin: 0; 
+                            padding: 20px; 
+                            background: white;
+                            color: #333;
+                        }
+                        .invoice-header { 
+                            text-align: center; 
+                            border-bottom: 3px solid #3b82f6; 
+                            padding-bottom: 20px; 
+                            margin-bottom: 30px; 
+                        }
+                        .company-name { 
+                            font-size: 28px; 
+                            font-weight: bold; 
+                            color: #1e40af; 
+                            margin-bottom: 5px; 
+                        }
+                        .company-subtitle { 
+                            font-size: 16px; 
+                            color: #6b7280; 
+                            margin-bottom: 10px; 
+                        }
+                        .invoice-number { 
+                            font-size: 20px; 
+                            font-weight: bold; 
+                            color: #dc2626; 
+                            background: #fef2f2; 
+                            padding: 10px 20px; 
+                            border-radius: 8px; 
+                            display: inline-block; 
+                        }
+                        .invoice-body { 
+                            display: grid; 
+                            grid-template-columns: 1fr 1fr; 
+                            gap: 30px; 
+                            margin-bottom: 30px; 
+                        }
+                        .section { 
+                            background: #f9fafb; 
+                            padding: 20px; 
+                            border-radius: 8px; 
+                            border-left: 4px solid #3b82f6; 
+                        }
+                        .section-title { 
+                            font-size: 18px; 
+                            font-weight: bold; 
+                            color: #1f2937; 
+                            margin-bottom: 15px; 
+                            display: flex; 
+                            align-items: center; 
+                        }
+                        .section-title i { 
+                            margin-right: 8px; 
+                            color: #3b82f6; 
+                        }
+                        .info-row { 
+                            display: flex; 
+                            justify-content: space-between; 
+                            margin-bottom: 8px; 
+                            padding: 5px 0; 
+                        }
+                        .info-label { 
+                            font-weight: 600; 
+                            color: #6b7280; 
+                        }
+                        .info-value { 
+                            color: #1f2937; 
+                        }
+                        .service-details { 
+                            grid-column: 1 / -1; 
+                            background: #f0f9ff; 
+                            border-left-color: #0ea5e9; 
+                        }
+                        .problem-description { 
+                            background: #fff; 
+                            padding: 15px; 
+                            border-radius: 6px; 
+                            border: 1px solid #e5e7eb; 
+                            margin-top: 10px; 
+                            line-height: 1.6; 
+                        }
+                        .status-badge { 
+                            padding: 8px 16px; 
+                            border-radius: 20px; 
+                            font-weight: bold; 
+                            text-transform: uppercase; 
+                            font-size: 12px; 
+                            letter-spacing: 1px; 
+                        }
+                        .status-aberto { 
+                            background: #fef2f2; 
+                            color: #dc2626; 
+                            border: 2px solid #fca5a5; 
+                        }
+                        .status-andamento { 
+                            background: #fffbeb; 
+                            color: #d97706; 
+                            border: 2px solid #fcd34d; 
+                        }
+                        .status-finalizado { 
+                            background: #f0fdf4; 
+                            color: #16a34a; 
+                            border: 2px solid #86efac; 
+                        }
+                        .invoice-footer { 
+                            text-align: center; 
+                            border-top: 2px solid #e5e7eb; 
+                            padding-top: 20px; 
+                            margin-top: 30px; 
+                            color: #6b7280; 
+                        }
+                        .total-section { 
+                            background: #1e40af; 
+                            color: white; 
+                            padding: 20px; 
+                            border-radius: 8px; 
+                            text-align: center; 
+                            margin: 20px 0; 
+                        }
+                        .total-value { 
+                            font-size: 24px; 
+                            font-weight: bold; 
+                        }
+                        @media print {
+                            body { margin: 0; padding: 15px; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <div class="invoice-header">
+                        <div class="company-name">🔧 GALEGO CELL</div>
+                        <div class="company-subtitle">Assistência Técnica Especializada</div>
+                        <div style="margin: 15px 0;">
+                            <div class="invoice-number">ORDEM DE SERVIÇO: ${os.numero}</div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <span class="status-badge status-${os.status}">
+                                ${getStatusText(os.status)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="invoice-body">
+                        <div class="section">
+                            <div class="section-title">
+                                <i class="fas fa-user"></i>
+                                Dados do Cliente
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Nome:</span>
+                                <span class="info-value">${os.cliente}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Telefone:</span>
+                                <span class="info-value">${os.telefone}</span>
+                            </div>
+                            ${os.email ? `
+                            <div class="info-row">
+                                <span class="info-label">E-mail:</span>
+                                <span class="info-value">${os.email}</span>
+                            </div>
+                            ` : ''}
+                            ${os.documento ? `
+                            <div class="info-row">
+                                <span class="info-label">CPF/CNPJ:</span>
+                                <span class="info-value">${os.documento}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                <i class="fas fa-laptop"></i>
+                                Dados do Produto
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Produto:</span>
+                                <span class="info-value">${os.produto}</span>
+                            </div>
+                            ${os.modelo ? `
+                            <div class="info-row">
+                                <span class="info-label">Modelo:</span>
+                                <span class="info-value">${os.modelo}</span>
+                            </div>
+                            ` : ''}
+                            ${os.serie ? `
+                            <div class="info-row">
+                                <span class="info-label">Série:</span>
+                                <span class="info-value">${os.serie}</span>
+                            </div>
+                            ` : ''}
+                            <div class="info-row">
+                                <span class="info-label">Prioridade:</span>
+                                <span class="info-value">${os.prioridade.toUpperCase()}</span>
+                            </div>
+                        </div>
+
+                        <div class="section service-details">
+                            <div class="section-title">
+                                <i class="fas fa-tools"></i>
+                                Detalhes do Serviço
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Data de Abertura:</span>
+                                <span class="info-value">${os.data}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Última Atualização:</span>
+                                <span class="info-value">${os.dataAtualizacao}</span>
+                            </div>
+                            ${os.prazo ? `
+                            <div class="info-row">
+                                <span class="info-label">Prazo Estimado:</span>
+                                <span class="info-value">${os.prazo} dias</span>
+                            </div>
+                            ` : ''}
+                            
+                            <div style="margin-top: 15px;">
+                                <div class="info-label" style="margin-bottom: 8px;">Problema Relatado:</div>
+                                <div class="problem-description">${os.problema}</div>
+                            </div>
+                            
+                            ${os.observacoes ? `
+                            <div style="margin-top: 15px;">
+                                <div class="info-label" style="margin-bottom: 8px;">Observações Técnicas:</div>
+                                <div class="problem-description">${os.observacoes}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    ${os.valor ? `
+                    <div class="total-section">
+                        <div>VALOR ESTIMADO DO SERVIÇO</div>
+                        <div class="total-value">R$ ${parseFloat(os.valor).toFixed(2)}</div>
+                    </div>
+                    ` : ''}
+
+                    <div class="invoice-footer">
+                        <p><strong>Galego Cell - Assistência Técnica</strong></p>
+                        <p>📱 Telefone: (11) 99999-9999 | 📧 E-mail: contato@galegocell.com</p>
+                        <p>🏢 Endereço: Rua da Tecnologia, 123 - Centro</p>
+                        <p style="margin-top: 15px; font-size: 12px;">
+                            <i class="fas fa-info-circle"></i>
+                            Esta é uma ordem de serviço gerada automaticamente pelo sistema TechOS Pro
+                        </p>
+                        <p style="font-size: 12px; margin-top: 10px;">
+                            Gerado em: ${new Date().toLocaleString('pt-BR')}
+                        </p>
+                    </div>
+
+                    <div class="no-print" style="text-align: center; margin-top: 30px;">
+                        <button onclick="window.print()" style="background: #3b82f6; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; margin-right: 10px;">
+                            <i class="fas fa-print"></i> Imprimir
+                        </button>
+                        <button onclick="window.close()" style="background: #6b7280; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;">
+                            <i class="fas fa-times"></i> Fechar
+                        </button>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            invoiceWindow.document.write(invoiceContent);
+            invoiceWindow.document.close();
+            
+            showNotification('success', 'Nota Fiscal Gerada!', 'Documento criado com sucesso');
         }
 
         // Export data
@@ -1849,5 +2147,5 @@
             }
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'95fe2156d1cd6f86',t:'MTc1MjYzMzU3OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'95fe2de1928327e7',t:'MTc1MjYzNDA5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
