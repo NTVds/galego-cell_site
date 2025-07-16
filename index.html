@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechOS Pro - Sistema de Gestão de Ordens de Serviço</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status-aberto { 
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #dc2626; 
+            border: 1px solid #f87171;
+        }
+        .status-andamento { 
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #d97706; 
+            border: 1px solid #f59e0b;
+        }
+        .status-finalizado { 
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+            color: #16a34a; 
+            border: 1px solid #22c55e;
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .sidebar {
+            background: linear-gradient(180deg, #1e293b, #334155);
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);
+            background-size: 300% 100%;
+            animation: progressGradient 3s ease infinite;
+        }
+        
+        @keyframes progressGradient {
+            0% { background-position: 100% 0%; }
+            100% { background-position: 0% 0%; }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Notification System -->
+    <div id="notification" class="notification bg-white rounded-lg shadow-xl p-4 max-w-sm">
+        <div class="flex items-center">
+            <div id="notification-icon" class="mr-3"></div>
+            <div>
+                <p id="notification-title" class="font-semibold text-gray-900"></p>
+                <p id="notification-message" class="text-sm text-gray-600"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Button -->
+    <div class="lg:hidden fixed top-4 left-4 z-50">
+        <button id="mobile-menu-btn" class="glass-effect p-3 rounded-lg shadow-lg">
+            <i class="fas fa-bars text-gray-700 text-xl"></i>
+        </button>
+    </div>
+
+    <div class="flex min-h-screen">
+        <!-- Mobile Overlay -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
+        
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar fixed lg:relative w-64 h-full shadow-2xl transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-50">
+            <div class="p-6">
+                <div class="flex items-center mb-8">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-xl mr-3">
+                        <i class="fas fa-cogs text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">TechOS Pro</h1>
+                        <p class="text-slate-300 text-sm">Gestão Profissional</p>
+                    </div>
+                </div>
+                
+                <nav class="space-y-2">
+                    <button onclick="showSection('dashboard')" class="nav-btn w-full flex items-center px-4 py-3 text-left text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-all">
+                        <i class="fas fa-chart-pie mr-3"></i>
+                        Dashboard
+                    </button>
+                    <button onclick="showSection('nova-os')" class="nav-btn w-full flex items-center px-4 py-3 text-left text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-all">
+                        <i class="fas fa-plus-circle mr-3"></i>
+                        Nova OS
+                    </button>
+                    <button onclick="showSection('produtos-servicos')" class="nav-btn w-full flex items-center px-4 py-3 text-left text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-all">
+                        <i class="fas fa-box mr-3"></i>
+                        Produtos & Serviços
+                    </button>
+                    <button onclick="showSection('relatorios')" class="nav-btn w-full flex items-center px-4 py-3 text-left text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-all">
+                        <i class="fas fa-chart-bar mr-3"></i>
+                        Relatórios
+                    </button>
+                    <button onclick="showSection('configuracoes')" class="nav-btn w-full flex items-center px-4 py-3 text-left text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-all">
+                        <i class="fas fa-cog mr-3"></i>
+                        Configurações
+                    </button>
+                </nav>
+            </div>
+            
+            <div class="absolute bottom-0 left-0 right-0 p-6">
+                <div class="glass-effect rounded-lg p-4">
+                    <div class="flex items-center">
+                        <div class="bg-green-500 w-3 h-3 rounded-full mr-2"></div>
+                        <span class="text-sm text-slate-600">Sistema Online</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Versão 2.1.0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-hidden lg:ml-0 ml-0 w-full">
+            <!-- Header -->
+            <header class="glass-effect shadow-lg border-b border-white/20">
+                <div class="px-4 lg:px-8 py-4 lg:py-6">
+                    <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+                        <div class="lg:ml-0 ml-16">
+                            <h2 id="page-title" class="text-xl lg:text-2xl font-bold text-gray-900">Dashboard</h2>
+                            <p id="page-subtitle" class="text-sm lg:text-base text-gray-600">Visão geral do sistema</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                            <div class="relative">
+                                <input type="text" id="search-input" placeholder="Buscar OS..." class="w-full sm:w-auto pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                            <button onclick="exportData()" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition-all text-sm lg:text-base">
+                                <i class="fas fa-download mr-2"></i>
+                                <span class="hidden sm:inline">Exportar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="section p-4 lg:p-8 animate-fade-in">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
+                    <div class="glass-effect rounded-xl p-3 lg:p-6 card-hover border-l-4 border-red-500">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                            <div class="flex-1">
+                                <p class="text-xs lg:text-sm font-medium text-gray-600 uppercase tracking-wide">Abertas</p>
+                                <p class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 lg:mt-2" id="count-aberto">0</p>
+                                <p class="text-xs lg:text-sm text-red-600 mt-1 hidden lg:block">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    Requer atenção
+                                </p>
+                            </div>
+                            <div class="bg-red-100 p-2 lg:p-4 rounded-full self-end lg:self-auto mt-2 lg:mt-0">
+                                <i class="fas fa-exclamation-circle text-red-600 text-lg lg:text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-effect rounded-xl p-3 lg:p-6 card-hover border-l-4 border-yellow-500">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                            <div class="flex-1">
+                                <p class="text-xs lg:text-sm font-medium text-gray-600 uppercase tracking-wide">Andamento</p>
+                                <p class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 lg:mt-2" id="count-andamento">0</p>
+                                <p class="text-xs lg:text-sm text-yellow-600 mt-1 hidden lg:block">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    Em execução
+                                </p>
+                            </div>
+                            <div class="bg-yellow-100 p-2 lg:p-4 rounded-full self-end lg:self-auto mt-2 lg:mt-0">
+                                <i class="fas fa-tools text-yellow-600 text-lg lg:text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-effect rounded-xl p-3 lg:p-6 card-hover border-l-4 border-green-500">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                            <div class="flex-1">
+                                <p class="text-xs lg:text-sm font-medium text-gray-600 uppercase tracking-wide">Finalizadas</p>
+                                <p class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 lg:mt-2" id="count-finalizado">0</p>
+                                <p class="text-xs lg:text-sm text-green-600 mt-1 hidden lg:block">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    Concluídas
+                                </p>
+                            </div>
+                            <div class="bg-green-100 p-2 lg:p-4 rounded-full self-end lg:self-auto mt-2 lg:mt-0">
+                                <i class="fas fa-check-double text-green-600 text-lg lg:text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-effect rounded-xl p-3 lg:p-6 card-hover border-l-4 border-blue-500 col-span-2 lg:col-span-1">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                            <div class="flex-1">
+                                <p class="text-xs lg:text-sm font-medium text-gray-600 uppercase tracking-wide">Total</p>
+                                <p class="text-2xl lg:text-3xl font-bold text-gray-900 mt-1 lg:mt-2" id="count-total">0</p>
+                                <p class="text-xs lg:text-sm text-blue-600 mt-1 hidden lg:block">
+                                    <i class="fas fa-chart-line mr-1"></i>
+                                    Este mês
+                                </p>
+                            </div>
+                            <div class="bg-blue-100 p-2 lg:p-4 rounded-full self-end lg:self-auto mt-2 lg:mt-0">
+                                <i class="fas fa-clipboard-list text-blue-600 text-lg lg:text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+                    <div class="lg:col-span-2">
+                        <div class="glass-effect rounded-xl p-4 lg:p-6">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 lg:mb-6 space-y-3 sm:space-y-0">
+                                <h3 class="text-base lg:text-lg font-semibold text-gray-900">OS Recentes</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <button onclick="filterOS('all')" class="filter-btn px-2 lg:px-3 py-1 text-xs lg:text-sm rounded-full bg-blue-100 text-blue-800">Todas</button>
+                                    <button onclick="filterOS('aberto')" class="filter-btn px-2 lg:px-3 py-1 text-xs lg:text-sm rounded-full bg-gray-100 text-gray-600">Abertas</button>
+                                    <button onclick="filterOS('andamento')" class="filter-btn px-2 lg:px-3 py-1 text-xs lg:text-sm rounded-full bg-gray-100 text-gray-600">Andamento</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Mobile Card View -->
+                            <div class="lg:hidden space-y-3" id="os-mobile-list">
+                                <!-- Mobile OS cards will be inserted here -->
+                            </div>
+                            
+                            <!-- Desktop Table View -->
+                            <div class="hidden lg:block overflow-x-auto">
+                                <table class="min-w-full">
+                                    <thead>
+                                        <tr class="border-b border-gray-200">
+                                            <th class="text-left py-3 px-4 font-semibold text-gray-700">OS</th>
+                                            <th class="text-left py-3 px-4 font-semibold text-gray-700">Cliente</th>
+                                            <th class="text-left py-3 px-4 font-semibold text-gray-700">Produto</th>
+                                            <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                            <th class="text-left py-3 px-4 font-semibold text-gray-700">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="os-list" class="divide-y divide-gray-100">
+                                        <!-- OS items will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 lg:space-y-6">
+                        <!-- Performance Chart -->
+                        <div class="glass-effect rounded-xl p-4 lg:p-6">
+                            <h3 class="text-base lg:text-lg font-semibold text-gray-900 mb-3 lg:mb-4">Performance Mensal</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Taxa de Conclusão</span>
+                                    <span class="text-sm font-semibold text-gray-900" id="completion-rate">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div id="completion-bar" class="progress-bar h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Tempo Médio</span>
+                                    <span class="text-sm font-semibold text-gray-900">2.5 dias</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Satisfação</span>
+                                    <div class="flex items-center">
+                                        <div class="flex text-yellow-400 mr-2">
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                        </div>
+                                        <span class="text-sm font-semibold text-gray-900">4.8</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="glass-effect rounded-xl p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h3>
+                            <div class="space-y-3">
+                                <button onclick="showSection('nova-os')" class="w-full btn-primary text-white py-3 px-4 rounded-lg font-medium">
+                                    <i class="fas fa-plus mr-2"></i>
+                                    Nova OS
+                                </button>
+                                <button onclick="generateReport()" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-purple-700 transition-all">
+                                    <i class="fas fa-file-pdf mr-2"></i>
+                                    Gerar Relatório
+                                </button>
+                                <button onclick="exportData()" class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg font-medium hover:from-green-600 hover:to-green-700 transition-all">
+                                    <i class="fas fa-download mr-2"></i>
+                                    Exportar Dados
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nova OS Section -->
+            <div id="nova-os" class="section hidden p-4 lg:p-8 animate-fade-in">
+                <div class="max-w-4xl mx-auto">
+                    <div class="glass-effect rounded-xl p-8">
+                        <div class="flex items-center mb-8">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg mr-4">
+                                <i class="fas fa-plus text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">Nova Ordem de Serviço</h2>
+                                <p class="text-gray-600">Preencha os dados para criar uma nova OS</p>
+                            </div>
+                        </div>
+                        
+                        <form id="os-form" class="space-y-8">
+                            <!-- Cliente Information -->
+                            <div class="bg-gray-50 rounded-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <i class="fas fa-user mr-2 text-blue-600"></i>
+                                    Dados do Cliente
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
+                                        <input type="text" id="cliente" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Telefone *</label>
+                                        <input type="tel" id="telefone" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+                                        <input type="email" id="email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">CPF/CNPJ</label>
+                                        <input type="text" id="documento" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product Information -->
+                            <div class="bg-gray-50 rounded-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <i class="fas fa-laptop mr-2 text-green-600"></i>
+                                    Dados do Produto
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Produto/Equipamento *</label>
+                                        <input type="text" id="produto" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Marca/Modelo</label>
+                                        <input type="text" id="modelo" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Número de Série</label>
+                                        <input type="text" id="serie" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Prioridade</label>
+                                        <select id="prioridade" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                            <option value="normal">Normal</option>
+                                            <option value="alta">Alta</option>
+                                            <option value="urgente">Urgente</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Service Information -->
+                            <div class="bg-gray-50 rounded-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <i class="fas fa-tools mr-2 text-orange-600"></i>
+                                    Detalhes do Serviço
+                                </h3>
+                                <div class="space-y-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Descrição do Problema *</label>
+                                        <textarea id="problema" rows="4" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Descreva detalhadamente o problema relatado pelo cliente..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Observações Técnicas</label>
+                                        <textarea id="observacoes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Observações adicionais, diagnóstico inicial, etc..."></textarea>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Valor Estimado (R$)</label>
+                                            <input type="number" id="valor" step="0.01" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Prazo Estimado (dias)</label>
+                                            <input type="number" id="prazo" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                                <button type="button" onclick="showSection('dashboard')" class="px-8 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-all font-medium">
+                                    <i class="fas fa-times mr-2"></i>
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="btn-primary px-8 py-3 text-white rounded-lg font-medium">
+                                    <i class="fas fa-save mr-2"></i>
+                                    Criar OS
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Produtos e Serviços Section -->
+            <div id="produtos-servicos" class="section hidden p-4 lg:p-8 animate-fade-in">
+                <div class="glass-effect rounded-xl p-4 lg:p-8">
+                    <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 space-y-4 lg:space-y-0">
+                        <div>
+                            <h2 class="text-xl lg:text-2xl font-bold text-gray-900">Produtos & Serviços</h2>
+                            <p class="text-gray-600">Gerencie seu catálogo de produtos e serviços</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                            <button onclick="showAddProductModal()" class="btn-primary px-4 py-2 text-white rounded-lg font-medium">
+                                <i class="fas fa-plus mr-2"></i>
+                                Novo Produto
+                            </button>
+                            <button onclick="showAddServiceModal()" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg font-medium hover:from-green-600 hover:to-green-700 transition-all">
+                                <i class="fas fa-plus mr-2"></i>
+                                Novo Serviço
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+                        <button onclick="switchTab('produtos')" id="tab-produtos" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all bg-white text-blue-600 shadow-sm">
+                            <i class="fas fa-box mr-2"></i>
+                            Produtos
+                        </button>
+                        <button onclick="switchTab('servicos')" id="tab-servicos" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all text-gray-600 hover:text-gray-900">
+                            <i class="fas fa-tools mr-2"></i>
+                            Serviços
+                        </button>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="relative mb-6">
+                        <input type="text" id="product-search" placeholder="Buscar produtos ou serviços..." class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <i class="fas fa-search absolute left-3 top-4 text-gray-400"></i>
+                    </div>
+
+                    <!-- Produtos Tab -->
+                    <div id="produtos-tab" class="tab-content">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="produtos-grid">
+                            <!-- Produtos serão inseridos aqui -->
+                        </div>
+                    </div>
+
+                    <!-- Serviços Tab -->
+                    <div id="servicos-tab" class="tab-content hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="servicos-grid">
+                            <!-- Serviços serão inseridos aqui -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relatórios Section -->
+            <div id="relatorios" class="section hidden p-4 lg:p-8 animate-fade-in">
+                <div class="glass-effect rounded-xl p-4 lg:p-8">
+                    <h2 class="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">Relatórios e Analytics</h2>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Relatórios Disponíveis</h3>
+                            <div class="space-y-3">
+                                <button class="w-full text-left p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">Relatório Mensal</h4>
+                                            <p class="text-sm text-gray-600">OS criadas, finalizadas e pendentes</p>
+                                        </div>
+                                        <i class="fas fa-download text-blue-600"></i>
+                                    </div>
+                                </button>
+                                <button class="w-full text-left p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">Performance por Técnico</h4>
+                                            <p class="text-sm text-gray-600">Produtividade e qualidade</p>
+                                        </div>
+                                        <i class="fas fa-download text-blue-600"></i>
+                                    </div>
+                                </button>
+                                <button class="w-full text-left p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">Análise Financeira</h4>
+                                            <p class="text-sm text-gray-600">Receitas e custos operacionais</p>
+                                        </div>
+                                        <i class="fas fa-download text-blue-600"></i>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Métricas em Tempo Real</h3>
+                            <div class="space-y-4">
+                                <div class="bg-white p-4 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600">Tempo Médio de Resolução</span>
+                                        <span class="font-bold text-blue-600">2.5 dias</span>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600">Taxa de Satisfação</span>
+                                        <span class="font-bold text-green-600">96.8%</span>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600">Receita Mensal</span>
+                                        <span class="font-bold text-purple-600">R$ 45.280</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configurações Section -->
+            <div id="configuracoes" class="section hidden p-4 lg:p-8 animate-fade-in">
+                <div class="glass-effect rounded-xl p-4 lg:p-8">
+                    <h2 class="text-xl lg:text-2xl font-bold text-gray-900 mb-4 lg:mb-6">Configurações do Sistema</h2>
+                    
+                    <div class="space-y-8">
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Configurações Gerais</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-900">Notificações por E-mail</h4>
+                                        <p class="text-sm text-gray-600">Receber alertas sobre mudanças de status</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-900">Backup Automático</h4>
+                                        <p class="text-sm text-gray-600">Backup diário dos dados</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Dados da Empresa</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nome da Empresa</label>
+                                    <input type="text" value="TechOS Pro Assistência" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">CNPJ</label>
+                                    <input type="text" value="12.345.678/0001-90" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+                                    <input type="text" value="(11) 99999-9999" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+                                    <input type="email" value="contato@techospro.com" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cliente Tracking Section -->
+            <div id="cliente-tracking" class="section hidden p-8 animate-fade-in">
+                <div class="max-w-4xl mx-auto">
+                    <div class="glass-effect rounded-xl p-8">
+                        <div class="text-center mb-8">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-full w-20 h-20 mx-auto mb-4">
+                                <i class="fas fa-search text-white text-2xl mt-2"></i>
+                            </div>
+                            <h2 class="text-3xl font-bold text-gray-900 mb-2">Acompanhe sua OS</h2>
+                            <p class="text-gray-600">Veja o status do seu serviço em tempo real</p>
+                        </div>
+                        
+                        <div id="tracking-content">
+                            <!-- Tracking content will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Produto -->
+    <div id="product-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="glass-effect rounded-xl p-6 max-w-md w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="text-center mb-6">
+                <div class="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-4">
+                    <i class="fas fa-box text-blue-600 text-xl mt-2"></i>
+                </div>
+                <h3 id="product-modal-title" class="text-xl font-semibold text-gray-900">Novo Produto</h3>
+                <p class="text-gray-600 mt-2">Preencha as informações do produto</p>
+            </div>
+            
+            <form id="product-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Produto *</label>
+                    <input type="text" id="product-name" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                    <select id="product-category" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Selecione uma categoria</option>
+                        <option value="hardware">Hardware</option>
+                        <option value="software">Software</option>
+                        <option value="acessorios">Acessórios</option>
+                        <option value="pecas">Peças</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Preço (R$) *</label>
+                        <input type="number" id="product-price" step="0.01" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Estoque</label>
+                        <input type="number" id="product-stock" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                    <textarea id="product-description" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Descrição detalhada do produto..."></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                    <button type="button" onclick="closeProductModal()" class="px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-all font-medium">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary px-6 py-3 text-white rounded-lg font-medium">
+                        <i class="fas fa-save mr-2"></i>
+                        Salvar Produto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Serviço -->
+    <div id="service-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="glass-effect rounded-xl p-6 max-w-md w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="text-center mb-6">
+                <div class="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-4">
+                    <i class="fas fa-tools text-green-600 text-xl mt-2"></i>
+                </div>
+                <h3 id="service-modal-title" class="text-xl font-semibold text-gray-900">Novo Serviço</h3>
+                <p class="text-gray-600 mt-2">Preencha as informações do serviço</p>
+            </div>
+            
+            <form id="service-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Serviço *</label>
+                    <input type="text" id="service-name" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                    <select id="service-category" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Selecione uma categoria</option>
+                        <option value="manutencao">Manutenção</option>
+                        <option value="instalacao">Instalação</option>
+                        <option value="configuracao">Configuração</option>
+                        <option value="reparo">Reparo</option>
+                        <option value="consultoria">Consultoria</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Preço (R$) *</label>
+                        <input type="number" id="service-price" step="0.01" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tempo (horas)</label>
+                        <input type="number" id="service-time" step="0.5" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                    <textarea id="service-description" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Descrição detalhada do serviço..."></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                    <button type="button" onclick="closeServiceModal()" class="px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-all font-medium">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary px-6 py-3 text-white rounded-lg font-medium">
+                        <i class="fas fa-save mr-2"></i>
+                        Salvar Serviço
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para editar status -->
+    <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="glass-effect rounded-xl p-8 max-w-md w-full mx-4">
+            <div class="text-center mb-6">
+                <div class="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-4">
+                    <i class="fas fa-edit text-blue-600 text-xl mt-2"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900">Alterar Status da OS</h3>
+                <p class="text-gray-600 mt-2">Selecione o novo status para esta ordem de serviço</p>
+            </div>
+            
+            <div class="space-y-4">
+                <label class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                    <input type="radio" name="status" value="aberto" class="mr-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+                        <div>
+                            <span class="font-medium text-gray-900">Aberto</span>
+                            <p class="text-sm text-gray-600">OS criada, aguardando início</p>
+                        </div>
+                    </div>
+                </label>
+                
+                <label class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                    <input type="radio" name="status" value="andamento" class="mr-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-tools text-yellow-500 mr-3"></i>
+                        <div>
+                            <span class="font-medium text-gray-900">Em Andamento</span>
+                            <p class="text-sm text-gray-600">Serviço sendo executado</p>
+                        </div>
+                    </div>
+                </label>
+                
+                <label class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                    <input type="radio" name="status" value="finalizado" class="mr-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                        <div>
+                            <span class="font-medium text-gray-900">Finalizado</span>
+                            <p class="text-sm text-gray-600">Serviço concluído</p>
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="mt-8 flex justify-end space-x-4">
+                <button onclick="closeStatusModal()" class="px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-all font-medium">
+                    Cancelar
+                </button>
+                <button onclick="updateStatus()" class="btn-primary px-6 py-3 text-white rounded-lg font-medium">
+                    <i class="fas fa-save mr-2"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let osData = JSON.parse(localStorage.getItem('osData')) || [];
+        let currentEditingOS = null;
+        let currentFilter = 'all';
+        
+        // Produtos e Serviços
+        let produtosData = JSON.parse(localStorage.getItem('produtosData')) || [];
+        let servicosData = JSON.parse(localStorage.getItem('servicosData')) || [];
+        let currentEditingProduct = null;
+        let currentEditingService = null;
+        let currentTab = 'produtos';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDashboard();
+            setupSearch();
+            setupMobileMenu();
+            
+            // Check if there's a tracking ID in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const trackingId = urlParams.get('os');
+            if (trackingId) {
+                showClientTracking(trackingId);
+            }
+        });
+
+        // Setup mobile menu
+        function setupMobileMenu() {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            mobileMenuBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            });
+            
+            overlay.addEventListener('click', function() {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            });
+            
+            // Close menu when clicking nav items on mobile
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (window.innerWidth < 1024) {
+                        sidebar.classList.add('-translate-x-full');
+                        overlay.classList.add('hidden');
+                    }
+                });
+            });
+        }
+
+        // Show sections with page title updates
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(section).classList.remove('hidden');
+            
+            // Update page title and subtitle
+            const titles = {
+                'dashboard': { title: 'Dashboard', subtitle: 'Visão geral do sistema' },
+                'nova-os': { title: 'Nova OS', subtitle: 'Criar nova ordem de serviço' },
+                'produtos-servicos': { title: 'Produtos & Serviços', subtitle: 'Gerencie seu catálogo' },
+                'relatorios': { title: 'Relatórios', subtitle: 'Analytics e relatórios' },
+                'configuracoes': { title: 'Configurações', subtitle: 'Configurações do sistema' },
+                'cliente-tracking': { title: 'Acompanhamento', subtitle: 'Status da ordem de serviço' }
+            };
+            
+            if (titles[section]) {
+                document.getElementById('page-title').textContent = titles[section].title;
+                document.getElementById('page-subtitle').textContent = titles[section].subtitle;
+            }
+            
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-700', 'text-white');
+                btn.classList.add('text-slate-300');
+            });
+            
+            if (section === 'dashboard') {
+                updateDashboard();
+            } else if (section === 'produtos-servicos') {
+                renderProductsAndServices();
+                setupProductSearch();
+            }
+        }
+
+        // Setup search functionality
+        function setupSearch() {
+            document.getElementById('search-input').addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                filterOSList(searchTerm);
+            });
+        }
+
+        // Filter OS list
+        function filterOSList(searchTerm = '') {
+            const filteredData = osData.filter(os => {
+                const matchesSearch = searchTerm === '' || 
+                    os.numero.toLowerCase().includes(searchTerm) ||
+                    os.cliente.toLowerCase().includes(searchTerm) ||
+                    os.produto.toLowerCase().includes(searchTerm);
+                
+                const matchesFilter = currentFilter === 'all' || os.status === currentFilter;
+                
+                return matchesSearch && matchesFilter;
+            });
+            
+            renderOSList(filteredData);
+        }
+
+        // Filter by status
+        function filterOS(status) {
+            currentFilter = status;
+            
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-100', 'text-blue-800');
+                btn.classList.add('bg-gray-100', 'text-gray-600');
+            });
+            
+            event.target.classList.remove('bg-gray-100', 'text-gray-600');
+            event.target.classList.add('bg-blue-100', 'text-blue-800');
+            
+            filterOSList(document.getElementById('search-input').value);
+        }
+
+        // Create new OS
+        document.getElementById('os-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const osNumber = 'OS' + Date.now().toString().slice(-6);
+            const newOS = {
+                id: Date.now(),
+                numero: osNumber,
+                cliente: document.getElementById('cliente').value,
+                telefone: document.getElementById('telefone').value,
+                email: document.getElementById('email').value || '',
+                documento: document.getElementById('documento').value || '',
+                produto: document.getElementById('produto').value,
+                modelo: document.getElementById('modelo').value || '',
+                serie: document.getElementById('serie').value || '',
+                prioridade: document.getElementById('prioridade').value,
+                problema: document.getElementById('problema').value,
+                observacoes: document.getElementById('observacoes').value || '',
+                valor: document.getElementById('valor').value || 0,
+                prazo: document.getElementById('prazo').value || 0,
+                status: 'aberto',
+                data: new Date().toLocaleDateString('pt-BR'),
+                dataCompleta: new Date().toLocaleString('pt-BR'),
+                dataAtualizacao: new Date().toLocaleString('pt-BR')
+            };
+            
+            osData.push(newOS);
+            localStorage.setItem('osData', JSON.stringify(osData));
+            
+            // Reset form
+            document.getElementById('os-form').reset();
+            
+            // Show success notification
+            showNotification('success', 'OS Criada!', `OS ${osNumber} criada com sucesso`);
+            
+            // Copy tracking link to clipboard
+            const trackingLink = `${window.location.origin}${window.location.pathname}?os=${osNumber}`;
+            navigator.clipboard.writeText(trackingLink);
+            
+            setTimeout(() => {
+                showSection('dashboard');
+            }, 2000);
+        });
+
+        // Update dashboard
+        function updateDashboard() {
+            const counts = {
+                aberto: osData.filter(os => os.status === 'aberto').length,
+                andamento: osData.filter(os => os.status === 'andamento').length,
+                finalizado: osData.filter(os => os.status === 'finalizado').length,
+                total: osData.length
+            };
+            
+            document.getElementById('count-aberto').textContent = counts.aberto;
+            document.getElementById('count-andamento').textContent = counts.andamento;
+            document.getElementById('count-finalizado').textContent = counts.finalizado;
+            document.getElementById('count-total').textContent = counts.total;
+            
+            // Update completion rate
+            const completionRate = counts.total > 0 ? Math.round((counts.finalizado / counts.total) * 100) : 0;
+            document.getElementById('completion-rate').textContent = completionRate + '%';
+            document.getElementById('completion-bar').style.width = completionRate + '%';
+            
+            renderOSList();
+        }
+
+        // Render OS list
+        function renderOSList(data = osData) {
+            const tbody = document.getElementById('os-list');
+            const mobileList = document.getElementById('os-mobile-list');
+            
+            // Clear both lists
+            tbody.innerHTML = '';
+            mobileList.innerHTML = '';
+            
+            if (data.length === 0) {
+                const emptyMessage = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-inbox text-4xl mb-4 block"></i>
+                        <p>Nenhuma OS encontrada</p>
+                    </div>
+                `;
+                
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-4 block"></i>
+                            Nenhuma OS encontrada
+                        </td>
+                    </tr>
+                `;
+                mobileList.innerHTML = emptyMessage;
+                return;
+            }
+            
+            data.slice(0, 10).forEach(os => {
+                const priorityIcon = {
+                    'normal': '<i class="fas fa-circle text-gray-400"></i>',
+                    'alta': '<i class="fas fa-circle text-yellow-500"></i>',
+                    'urgente': '<i class="fas fa-circle text-red-500"></i>'
+                };
+                
+                // Desktop table row
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition-colors';
+                row.innerHTML = `
+                    <td class="px-4 py-4">
+                        <div class="flex items-center">
+                            ${priorityIcon[os.prioridade] || priorityIcon.normal}
+                            <div class="ml-3">
+                                <div class="text-sm font-medium text-gray-900">${os.numero}</div>
+                                <div class="text-xs text-gray-500">${os.data}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-4">
+                        <div class="text-sm text-gray-900 font-medium">${os.cliente}</div>
+                        <div class="text-xs text-gray-500">${os.telefone}</div>
+                    </td>
+                    <td class="px-4 py-4">
+                        <div class="text-sm text-gray-900">${os.produto}</div>
+                        <div class="text-xs text-gray-500">${os.modelo || '-'}</div>
+                    </td>
+                    <td class="px-4 py-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium status-${os.status}">
+                            ${getStatusText(os.status)}
+                        </span>
+                    </td>
+                    <td class="px-4 py-4">
+                        <div class="flex space-x-2">
+                            <button onclick="editStatus('${os.id}')" class="text-blue-600 hover:text-blue-900 text-sm" title="Editar Status">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="copyTrackingLink('${os.numero}')" class="text-green-600 hover:text-green-900 text-sm" title="Link Cliente">
+                                <i class="fas fa-link"></i>
+                            </button>
+                            <button onclick="viewOS('${os.id}')" class="text-purple-600 hover:text-purple-900 text-sm" title="Visualizar">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="deleteOS('${os.id}')" class="text-red-600 hover:text-red-900 text-sm" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+                
+                // Mobile card
+                const mobileCard = document.createElement('div');
+                mobileCard.className = 'bg-white rounded-lg p-4 shadow-sm border border-gray-200';
+                mobileCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center">
+                            ${priorityIcon[os.prioridade] || priorityIcon.normal}
+                            <div class="ml-2">
+                                <div class="text-sm font-semibold text-gray-900">${os.numero}</div>
+                                <div class="text-xs text-gray-500">${os.data}</div>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium status-${os.status}">
+                            ${getStatusText(os.status)}
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-2 mb-3">
+                        <div>
+                            <span class="text-xs font-medium text-gray-600">Cliente:</span>
+                            <span class="text-sm text-gray-900 ml-1">${os.cliente}</span>
+                        </div>
+                        <div>
+                            <span class="text-xs font-medium text-gray-600">Produto:</span>
+                            <span class="text-sm text-gray-900 ml-1">${os.produto}</span>
+                        </div>
+                        <div>
+                            <span class="text-xs font-medium text-gray-600">Telefone:</span>
+                            <span class="text-sm text-gray-900 ml-1">${os.telefone}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+                        <div class="flex space-x-3">
+                            <button onclick="editStatus('${os.id}')" class="text-blue-600 hover:text-blue-900 text-sm" title="Editar Status">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="copyTrackingLink('${os.numero}')" class="text-green-600 hover:text-green-900 text-sm" title="Link Cliente">
+                                <i class="fas fa-link"></i>
+                            </button>
+                            <button onclick="viewOS('${os.id}')" class="text-purple-600 hover:text-purple-900 text-sm" title="Visualizar">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="deleteOS('${os.id}')" class="text-red-600 hover:text-red-900 text-sm" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                mobileList.appendChild(mobileCard);
+            });
+        }
+
+        // Get status text
+        function getStatusText(status) {
+            const statusMap = {
+                'aberto': 'Aberto',
+                'andamento': 'Em Andamento',
+                'finalizado': 'Finalizado'
+            };
+            return statusMap[status] || status;
+        }
+
+        // Edit status
+        function editStatus(osId) {
+            const os = osData.find(o => o.id == osId);
+            if (!os) return;
+            
+            currentEditingOS = osId;
+            document.querySelector(`input[name="status"][value="${os.status}"]`).checked = true;
+            document.getElementById('status-modal').classList.remove('hidden');
+            document.getElementById('status-modal').classList.add('flex');
+        }
+
+        // Close status modal
+        function closeStatusModal() {
+            document.getElementById('status-modal').classList.add('hidden');
+            document.getElementById('status-modal').classList.remove('flex');
+            currentEditingOS = null;
+        }
+
+        // Update status
+        function updateStatus() {
+            if (!currentEditingOS) return;
+            
+            const selectedStatus = document.querySelector('input[name="status"]:checked').value;
+            const osIndex = osData.findIndex(o => o.id == currentEditingOS);
+            
+            if (osIndex !== -1) {
+                osData[osIndex].status = selectedStatus;
+                osData[osIndex].dataAtualizacao = new Date().toLocaleString('pt-BR');
+                localStorage.setItem('osData', JSON.stringify(osData));
+                updateDashboard();
+                
+                showNotification('success', 'Status Atualizado!', `OS alterada para ${getStatusText(selectedStatus)}`);
+            }
+            
+            closeStatusModal();
+        }
+
+        // Copy tracking link
+        function copyTrackingLink(osNumber) {
+            const link = `${window.location.origin}${window.location.pathname}?os=${osNumber}`;
+            navigator.clipboard.writeText(link).then(() => {
+                showNotification('info', 'Link Copiado!', 'Link de acompanhamento copiado para área de transferência');
+            });
+        }
+
+        // View OS details
+        function viewOS(osId) {
+            const os = osData.find(o => o.id == osId);
+            if (!os) return;
+            
+            showClientTracking(os.numero);
+        }
+
+        // Delete OS
+        function deleteOS(osId) {
+            if (confirm('Tem certeza que deseja excluir esta OS? Esta ação não pode ser desfeita.')) {
+                osData = osData.filter(o => o.id != osId);
+                localStorage.setItem('osData', JSON.stringify(osData));
+                updateDashboard();
+                showNotification('warning', 'OS Excluída', 'Ordem de serviço removida do sistema');
+            }
+        }
+
+        // Show client tracking
+        function showClientTracking(osNumber) {
+            const os = osData.find(o => o.numero === osNumber);
+            
+            if (!os) {
+                document.getElementById('tracking-content').innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="bg-red-100 p-6 rounded-full w-24 h-24 mx-auto mb-6">
+                            <i class="fas fa-exclamation-triangle text-red-500 text-3xl mt-3"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold text-gray-900 mb-4">OS não encontrada</h3>
+                        <p class="text-gray-600 mb-6">Verifique o número da OS e tente novamente.</p>
+                        <button onclick="showSection('dashboard')" class="btn-primary px-6 py-3 text-white rounded-lg">
+                            Voltar ao Dashboard
+                        </button>
+                    </div>
+                `;
+            } else {
+                const statusConfig = {
+                    'aberto': { 
+                        icon: 'fas fa-exclamation-circle', 
+                        color: 'text-red-500', 
+                        bg: 'bg-red-100',
+                        progress: '33%'
+                    },
+                    'andamento': { 
+                        icon: 'fas fa-tools', 
+                        color: 'text-yellow-500', 
+                        bg: 'bg-yellow-100',
+                        progress: '66%'
+                    },
+                    'finalizado': { 
+                        icon: 'fas fa-check-circle', 
+                        color: 'text-green-500', 
+                        bg: 'bg-green-100',
+                        progress: '100%'
+                    }
+                };
+                
+                const config = statusConfig[os.status];
+                
+                document.getElementById('tracking-content').innerHTML = `
+                    <div class="text-center mb-8">
+                        <div class="${config.bg} p-6 rounded-full w-24 h-24 mx-auto mb-6">
+                            <i class="${config.icon} ${config.color} text-3xl mt-3"></i>
+                        </div>
+                        <h3 class="text-3xl font-bold text-gray-900 mb-2">OS ${os.numero}</h3>
+                        <span class="px-6 py-2 rounded-full text-lg font-medium status-${os.status}">
+                            ${getStatusText(os.status)}
+                        </span>
+                        
+                        <div class="mt-6 max-w-md mx-auto">
+                            <div class="flex justify-between text-sm text-gray-600 mb-2">
+                                <span>Progresso</span>
+                                <span>${config.progress}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="progress-bar h-3 rounded-full" style="width: ${config.progress}"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+                                <i class="fas fa-user mr-2 text-blue-600"></i>
+                                Dados do Cliente
+                            </h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Nome</p>
+                                    <p class="text-gray-900">${os.cliente}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Telefone</p>
+                                    <p class="text-gray-900">${os.telefone}</p>
+                                </div>
+                                ${os.email ? `
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">E-mail</p>
+                                    <p class="text-gray-900">${os.email}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+                                <i class="fas fa-laptop mr-2 text-green-600"></i>
+                                Dados do Produto
+                            </h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Produto</p>
+                                    <p class="text-gray-900">${os.produto}</p>
+                                </div>
+                                ${os.modelo ? `
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Modelo</p>
+                                    <p class="text-gray-900">${os.modelo}</p>
+                                </div>
+                                ` : ''}
+                                ${os.serie ? `
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Série</p>
+                                    <p class="text-gray-900">${os.serie}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-lg p-6 mb-8">
+                        <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-tools mr-2 text-orange-600"></i>
+                            Detalhes do Serviço
+                        </h4>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Problema Relatado</p>
+                                <p class="text-gray-900 mt-1">${os.problema}</p>
+                            </div>
+                            ${os.observacoes ? `
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Observações</p>
+                                <p class="text-gray-900 mt-1">${os.observacoes}</p>
+                            </div>
+                            ` : ''}
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Data de Abertura</p>
+                                    <p class="text-gray-900">${os.data}</p>
+                                </div>
+                                ${os.prazo ? `
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Prazo Estimado</p>
+                                    <p class="text-gray-900">${os.prazo} dias</p>
+                                </div>
+                                ` : ''}
+                                ${os.valor ? `
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Valor Estimado</p>
+                                    <p class="text-gray-900">R$ ${parseFloat(os.valor).toFixed(2)}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 mb-4">Última atualização: ${os.dataAtualizacao}</p>
+                        <div class="flex justify-center space-x-4">
+                            <button onclick="window.print()" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-all">
+                                <i class="fas fa-print mr-2"></i>
+                                Imprimir
+                            </button>
+                            <button onclick="copyTrackingLink('${os.numero}')" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all">
+                                <i class="fas fa-share mr-2"></i>
+                                Compartilhar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            showSection('cliente-tracking');
+        }
+
+        // Show notification
+        function showNotification(type, title, message) {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notification-icon');
+            const titleEl = document.getElementById('notification-title');
+            const messageEl = document.getElementById('notification-message');
+            
+            const icons = {
+                'success': '<i class="fas fa-check-circle text-green-500 text-xl"></i>',
+                'error': '<i class="fas fa-exclamation-circle text-red-500 text-xl"></i>',
+                'warning': '<i class="fas fa-exclamation-triangle text-yellow-500 text-xl"></i>',
+                'info': '<i class="fas fa-info-circle text-blue-500 text-xl"></i>'
+            };
+            
+            icon.innerHTML = icons[type] || icons.info;
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        // Generate report
+        function generateReport() {
+            showNotification('info', 'Relatório', 'Gerando relatório em PDF...');
+        }
+
+        // Export data
+        function exportData() {
+            const dataStr = JSON.stringify(osData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `os-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showNotification('success', 'Exportação', 'Dados exportados com sucesso!');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('status-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeStatusModal();
+            }
+        });
+
+        // ===== PRODUTOS E SERVIÇOS =====
+        
+        // Switch tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+                btn.classList.add('text-gray-600');
+            });
+            
+            document.getElementById(`tab-${tab}`).classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+            document.getElementById(`tab-${tab}`).classList.remove('text-gray-600');
+            
+            // Show/hide content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(`${tab}-tab`).classList.remove('hidden');
+            
+            renderProductsAndServices();
+        }
+        
+        // Setup product search
+        function setupProductSearch() {
+            document.getElementById('product-search').addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                filterProductsAndServices(searchTerm);
+            });
+        }
+        
+        // Filter products and services
+        function filterProductsAndServices(searchTerm = '') {
+            if (currentTab === 'produtos') {
+                const filteredData = produtosData.filter(produto => 
+                    produto.name.toLowerCase().includes(searchTerm) ||
+                    produto.category.toLowerCase().includes(searchTerm) ||
+                    (produto.description && produto.description.toLowerCase().includes(searchTerm))
+                );
+                renderProducts(filteredData);
+            } else {
+                const filteredData = servicosData.filter(servico => 
+                    servico.name.toLowerCase().includes(searchTerm) ||
+                    servico.category.toLowerCase().includes(searchTerm) ||
+                    (servico.description && servico.description.toLowerCase().includes(searchTerm))
+                );
+                renderServices(filteredData);
+            }
+        }
+        
+        // Render products and services
+        function renderProductsAndServices() {
+            if (currentTab === 'produtos') {
+                renderProducts();
+            } else {
+                renderServices();
+            }
+        }
+        
+        // Render products
+        function renderProducts(data = produtosData) {
+            const grid = document.getElementById('produtos-grid');
+            grid.innerHTML = '';
+            
+            if (data.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <div class="bg-gray-100 p-6 rounded-full w-24 h-24 mx-auto mb-6">
+                            <i class="fas fa-box text-gray-400 text-3xl mt-3"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Nenhum produto cadastrado</h3>
+                        <p class="text-gray-600 mb-6">Comece criando seu primeiro produto</p>
+                        <button onclick="showAddProductModal()" class="btn-primary px-6 py-3 text-white rounded-lg">
+                            <i class="fas fa-plus mr-2"></i>
+                            Criar Produto
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            data.forEach(produto => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center">
+                            <div class="bg-blue-100 p-2 rounded-lg mr-3">
+                                <i class="fas fa-box text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">${produto.name}</h3>
+                                <p class="text-sm text-gray-500">${getCategoryName(produto.category, 'produto')}</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="editProduct('${produto.id}')" class="text-blue-600 hover:text-blue-900 p-1" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteProduct('${produto.id}')" class="text-red-600 hover:text-red-900 p-1" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between">
+                            <span class="text-sm font-medium text-gray-600">Preço:</span>
+                            <span class="text-lg font-bold text-green-600">R$ ${parseFloat(produto.price).toFixed(2)}</span>
+                        </div>
+                        ${produto.stock !== undefined ? `
+                        <div class="flex justify-between">
+                            <span class="text-sm font-medium text-gray-600">Estoque:</span>
+                            <span class="text-sm text-gray-900">${produto.stock} unidades</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${produto.description ? `
+                    <div class="border-t border-gray-100 pt-3">
+                        <p class="text-sm text-gray-600">${produto.description}</p>
+                    </div>
+                    ` : ''}
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        // Render services
+        function renderServices(data = servicosData) {
+            const grid = document.getElementById('servicos-grid');
+            grid.innerHTML = '';
+            
+            if (data.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <div class="bg-gray-100 p-6 rounded-full w-24 h-24 mx-auto mb-6">
+                            <i class="fas fa-tools text-gray-400 text-3xl mt-3"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Nenhum serviço cadastrado</h3>
+                        <p class="text-gray-600 mb-6">Comece criando seu primeiro serviço</p>
+                        <button onclick="showAddServiceModal()" class="btn-primary px-6 py-3 text-white rounded-lg">
+                            <i class="fas fa-plus mr-2"></i>
+                            Criar Serviço
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            data.forEach(servico => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center">
+                            <div class="bg-green-100 p-2 rounded-lg mr-3">
+                                <i class="fas fa-tools text-green-600"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">${servico.name}</h3>
+                                <p class="text-sm text-gray-500">${getCategoryName(servico.category, 'servico')}</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="editService('${servico.id}')" class="text-blue-600 hover:text-blue-900 p-1" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteService('${servico.id}')" class="text-red-600 hover:text-red-900 p-1" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between">
+                            <span class="text-sm font-medium text-gray-600">Preço:</span>
+                            <span class="text-lg font-bold text-green-600">R$ ${parseFloat(servico.price).toFixed(2)}</span>
+                        </div>
+                        ${servico.time ? `
+                        <div class="flex justify-between">
+                            <span class="text-sm font-medium text-gray-600">Tempo:</span>
+                            <span class="text-sm text-gray-900">${servico.time}h</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${servico.description ? `
+                    <div class="border-t border-gray-100 pt-3">
+                        <p class="text-sm text-gray-600">${servico.description}</p>
+                    </div>
+                    ` : ''}
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        // Get category name
+        function getCategoryName(category, type) {
+            const productCategories = {
+                'hardware': 'Hardware',
+                'software': 'Software',
+                'acessorios': 'Acessórios',
+                'pecas': 'Peças',
+                'outros': 'Outros'
+            };
+            
+            const serviceCategories = {
+                'manutencao': 'Manutenção',
+                'instalacao': 'Instalação',
+                'configuracao': 'Configuração',
+                'reparo': 'Reparo',
+                'consultoria': 'Consultoria',
+                'outros': 'Outros'
+            };
+            
+            if (type === 'produto') {
+                return productCategories[category] || category || 'Sem categoria';
+            } else {
+                return serviceCategories[category] || category || 'Sem categoria';
+            }
+        }
+        
+        // Show add product modal
+        function showAddProductModal() {
+            currentEditingProduct = null;
+            document.getElementById('product-modal-title').textContent = 'Novo Produto';
+            document.getElementById('product-form').reset();
+            document.getElementById('product-modal').classList.remove('hidden');
+            document.getElementById('product-modal').classList.add('flex');
+        }
+        
+        // Show add service modal
+        function showAddServiceModal() {
+            currentEditingService = null;
+            document.getElementById('service-modal-title').textContent = 'Novo Serviço';
+            document.getElementById('service-form').reset();
+            document.getElementById('service-modal').classList.remove('hidden');
+            document.getElementById('service-modal').classList.add('flex');
+        }
+        
+        // Close product modal
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+            document.getElementById('product-modal').classList.remove('flex');
+            currentEditingProduct = null;
+        }
+        
+        // Close service modal
+        function closeServiceModal() {
+            document.getElementById('service-modal').classList.add('hidden');
+            document.getElementById('service-modal').classList.remove('flex');
+            currentEditingService = null;
+        }
+        
+        // Edit product
+        function editProduct(productId) {
+            const produto = produtosData.find(p => p.id == productId);
+            if (!produto) return;
+            
+            currentEditingProduct = productId;
+            document.getElementById('product-modal-title').textContent = 'Editar Produto';
+            document.getElementById('product-name').value = produto.name;
+            document.getElementById('product-category').value = produto.category;
+            document.getElementById('product-price').value = produto.price;
+            document.getElementById('product-stock').value = produto.stock || '';
+            document.getElementById('product-description').value = produto.description || '';
+            
+            document.getElementById('product-modal').classList.remove('hidden');
+            document.getElementById('product-modal').classList.add('flex');
+        }
+        
+        // Edit service
+        function editService(serviceId) {
+            const servico = servicosData.find(s => s.id == serviceId);
+            if (!servico) return;
+            
+            currentEditingService = serviceId;
+            document.getElementById('service-modal-title').textContent = 'Editar Serviço';
+            document.getElementById('service-name').value = servico.name;
+            document.getElementById('service-category').value = servico.category;
+            document.getElementById('service-price').value = servico.price;
+            document.getElementById('service-time').value = servico.time || '';
+            document.getElementById('service-description').value = servico.description || '';
+            
+            document.getElementById('service-modal').classList.remove('hidden');
+            document.getElementById('service-modal').classList.add('flex');
+        }
+        
+        // Delete product
+        function deleteProduct(productId) {
+            if (confirm('Tem certeza que deseja excluir este produto?')) {
+                produtosData = produtosData.filter(p => p.id != productId);
+                localStorage.setItem('produtosData', JSON.stringify(produtosData));
+                renderProducts();
+                showNotification('warning', 'Produto Excluído', 'Produto removido do catálogo');
+            }
+        }
+        
+        // Delete service
+        function deleteService(serviceId) {
+            if (confirm('Tem certeza que deseja excluir este serviço?')) {
+                servicosData = servicosData.filter(s => s.id != serviceId);
+                localStorage.setItem('servicosData', JSON.stringify(servicosData));
+                renderServices();
+                showNotification('warning', 'Serviço Excluído', 'Serviço removido do catálogo');
+            }
+        }
+        
+        // Product form submit
+        document.getElementById('product-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const productData = {
+                id: currentEditingProduct || Date.now(),
+                name: document.getElementById('product-name').value,
+                category: document.getElementById('product-category').value,
+                price: parseFloat(document.getElementById('product-price').value),
+                stock: parseInt(document.getElementById('product-stock').value) || 0,
+                description: document.getElementById('product-description').value,
+                createdAt: new Date().toLocaleString('pt-BR')
+            };
+            
+            if (currentEditingProduct) {
+                const index = produtosData.findIndex(p => p.id == currentEditingProduct);
+                if (index !== -1) {
+                    produtosData[index] = { ...produtosData[index], ...productData };
+                    showNotification('success', 'Produto Atualizado!', 'Produto editado com sucesso');
+                }
+            } else {
+                produtosData.push(productData);
+                showNotification('success', 'Produto Criado!', 'Novo produto adicionado ao catálogo');
+            }
+            
+            localStorage.setItem('produtosData', JSON.stringify(produtosData));
+            renderProducts();
+            closeProductModal();
+        });
+        
+        // Service form submit
+        document.getElementById('service-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const serviceData = {
+                id: currentEditingService || Date.now(),
+                name: document.getElementById('service-name').value,
+                category: document.getElementById('service-category').value,
+                price: parseFloat(document.getElementById('service-price').value),
+                time: parseFloat(document.getElementById('service-time').value) || 0,
+                description: document.getElementById('service-description').value,
+                createdAt: new Date().toLocaleString('pt-BR')
+            };
+            
+            if (currentEditingService) {
+                const index = servicosData.findIndex(s => s.id == currentEditingService);
+                if (index !== -1) {
+                    servicosData[index] = { ...servicosData[index], ...serviceData };
+                    showNotification('success', 'Serviço Atualizado!', 'Serviço editado com sucesso');
+                }
+            } else {
+                servicosData.push(serviceData);
+                showNotification('success', 'Serviço Criado!', 'Novo serviço adicionado ao catálogo');
+            }
+            
+            localStorage.setItem('servicosData', JSON.stringify(servicosData));
+            renderServices();
+            closeServiceModal();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'n':
+                        e.preventDefault();
+                        showSection('nova-os');
+                        break;
+                    case 'd':
+                        e.preventDefault();
+                        showSection('dashboard');
+                        break;
+                    case 'p':
+                        e.preventDefault();
+                        showSection('produtos-servicos');
+                        break;
+                }
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'95fe2156d1cd6f86',t:'MTc1MjYzMzU3OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
